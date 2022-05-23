@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "356526237288",
+    "project_id": "learneventvision",
+    "storage_bucket": "learneventvision.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:356526237288:android:89619e373ad21396ccbddd",
+        "android_client_info": {
+          "package_name": "com.example.myapp"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "356526237288-qttiujt5vlin7d50e5mt8f3v7e84et3k.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCd8HdfEQTmPzUfjY49_3WlEDNfqof5F4M"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "356526237288-qttiujt5vlin7d50e5mt8f3v7e84et3k.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "356526237288-6sc9no98nktrpcf96lnthjknogbc5viq.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.google.ml.kit.flutter.example"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
