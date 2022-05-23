@@ -4,8 +4,8 @@ An fkutter app that uses google ML Kit.
 
 ### Features
 - [x] Select image from gallery
-- [ ] Identify text within image
-- [ ] Display text
+- [x] Identify text within image
+- [x] Display text
 
 ### Installation
 After cloning this repository, migrate to ```edu_app``` folder. Then, follow the following steps:
