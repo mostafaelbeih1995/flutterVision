@@ -211,10 +211,13 @@ class _MyHomePageState extends State<MyHomePage> {
 
 
       // scannedText += "Id: " + ('${trackingId}') + "\n";
-      for(Label label in detectedObject.labels){
-        scannedText = scannedText + ('${label.text} ${label.confidence}') + "\n";
+      if(detectedObject.labels.length > 0){
+        for(Label label in detectedObject.labels){
+          scannedText = scannedText + ('${label.text} ${label.confidence}') + "\n";
+        }
+        scannedText += "Rect: " + ('${rect.toString()}') + "\n";
       }
-      scannedText += "Rect: " + ('${rect.toString()}') + "\n";
+
     }
 
     objectDetector.close();
