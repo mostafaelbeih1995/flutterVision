@@ -1,7 +1,9 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:google_ml_kit/google_ml_kit.dart';
+import 'package:google_mlkit_image_labeling/google_mlkit_image_labeling.dart';
+import 'package:google_mlkit_object_detection/google_mlkit_object_detection.dart';
+import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'package:image_picker/image_picker.dart';
 
 void main() {
@@ -167,15 +169,57 @@ class _MyHomePageState extends State<MyHomePage> {
 
   void getRecognisedText(XFile image) async {
     final inputImage = InputImage.fromFilePath(image.path);
-    final textDetector = GoogleMlKit.vision.textDetector();
-    RecognisedText recognisedText = await textDetector.processImage(inputImage);
-    await textDetector.close();
-    scannedText = "";
-    for (TextBlock block in recognisedText.blocks) {
-      for (TextLine line in block.lines) {
-        scannedText = scannedText + line.text + "\n";
+
+    // text recognition code
+    // final TextRecognizer textRecognizer = TextRecognizer();
+    // final recognisedText = await textRecognizer.processImage(inputImage);
+    // await textRecognizer.close();
+    // scannedText = "";
+    // for (TextBlock block in recognisedText.blocks) {
+    //   for (TextLine line in block.lines) {
+    //     scannedText = scannedText + line.text + "\n";
+    //   }
+    // }
+
+    // image labeling code
+    // final ImageLabeler imgLbl = ImageLabeler(options: ImageLabelerOptions(confidenceThreshold: 0.5));
+    // final List<ImageLabel> labels = await imgLbl.processImage(inputImage);
+    // await imgLbl.close();
+
+    // if(labels == null){
+    //   print("No labels detected");
+    //   scannedText = "no labels detected";
+    // }
+    // for(ImageLabel label in labels){
+    //   var confidence = double.parse((label.confidence * 100).toStringAsFixed(1));
+    //   scannedText = scannedText + '[$confidence%] = ${label.label} \n';
+    // }
+
+
+    // object detection code
+    final ObjectDetectorOptions options = ObjectDetectorOptions(mode: DetectionMode.singleImage, classifyObjects: true, multipleObjects: true);
+    final ObjectDetector objectDetector = ObjectDetector(options: options);
+    final List<DetectedObject> objects = await objectDetector.processImage(inputImage);
+    scannedText = "Objects found : [" + objects.length.toString() + "]\n";
+
+
+    final List<DetectedObject> _objects = await objectDetector.processImage(inputImage);
+
+    for(DetectedObject detectedObject in _objects){
+      final rect = detectedObject.boundingBox;
+      final trackingId = detectedObject.trackingId;
+
+
+      // scannedText += "Id: " + ('${trackingId}') + "\n";
+      for(Label label in detectedObject.labels){
+        scannedText = scannedText + ('${label.text} ${label.confidence}') + "\n";
       }
+      scannedText += "Rect: " + ('${rect.toString()}') + "\n";
     }
+
+    objectDetector.close();
+
+
     textScanning = false;
     setState(() {});
   }
