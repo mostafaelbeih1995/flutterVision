@@ -1,10 +1,18 @@
-import 'dart:io';
+import 'dart:io' as io;
 
 import 'package:flutter/material.dart';
 import 'package:google_mlkit_image_labeling/google_mlkit_image_labeling.dart';
 import 'package:google_mlkit_object_detection/google_mlkit_object_detection.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'package:image_picker/image_picker.dart';
+
+//////////////////////////////////////////////////////
+
+import 'package:path/path.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:camera/camera.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 void main() {
   runApp(const MyApp());
@@ -61,7 +69,7 @@ class _MyHomePageState extends State<MyHomePage> {
                         height: 300,
                         color: Colors.grey[300]!,
                       ),
-                    if (imageFile != null) Image.file(File(imageFile!.path)),
+                    if (imageFile != null) Image.file(io.File(imageFile!.path)),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -168,9 +176,24 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   void getRecognisedText(XFile image) async {
+
+    //Loading the model
+    final path = 'assets/ml/object_labeler.tflite';
+    final modelPath = await _getModel(path);
+    print("model path");
+    print(modelPath);
+
+    final options = LocalObjectDetectorOptions(
+        mode: DetectionMode.singleImage,
+        modelPath: modelPath,
+        classifyObjects: true,
+        multipleObjects: true,
+    );
+
     final inputImage = InputImage.fromFilePath(image.path);
 
     // text recognition code
+
     // final TextRecognizer textRecognizer = TextRecognizer();
     // final recognisedText = await textRecognizer.processImage(inputImage);
     // await textRecognizer.close();
@@ -181,14 +204,15 @@ class _MyHomePageState extends State<MyHomePage> {
     //   }
     // }
 
-    // image labeling code
+    //image labeling code
+
     // final ImageLabeler imgLbl = ImageLabeler(options: ImageLabelerOptions(confidenceThreshold: 0.5));
     // final List<ImageLabel> labels = await imgLbl.processImage(inputImage);
     // await imgLbl.close();
-
+    //
     // if(labels == null){
     //   print("No labels detected");
-    //   scannedText = "no labels detected";
+    //   scannedText = "no labels detected \n";
     // }
     // for(ImageLabel label in labels){
     //   var confidence = double.parse((label.confidence * 100).toStringAsFixed(1));
@@ -197,10 +221,12 @@ class _MyHomePageState extends State<MyHomePage> {
 
 
     // object detection code
-    final ObjectDetectorOptions options = ObjectDetectorOptions(mode: DetectionMode.singleImage, classifyObjects: true, multipleObjects: true);
+
+    // final ObjectDetectorOptions options2 = ObjectDetectorOptions(mode: DetectionMode.singleImage, classifyObjects: true, multipleObjects: true);
     final ObjectDetector objectDetector = ObjectDetector(options: options);
+    scannedText += "Object detector created with options \n";
     final List<DetectedObject> objects = await objectDetector.processImage(inputImage);
-    scannedText = "Objects found : [" + objects.length.toString() + "]\n";
+    scannedText += "Objects found : [" + objects.length.toString() + "]\n";
 
 
     final List<DetectedObject> _objects = await objectDetector.processImage(inputImage);
@@ -230,5 +256,22 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   void initState() {
     super.initState();
+  }
+
+  Future<String> _getModel(String assetPath) async {
+    if (io.Platform.isAndroid) {
+      return 'flutter_assets/$assetPath';
+
+    }
+    final path = '${(await getApplicationSupportDirectory()).path}/$assetPath';
+    await io.Directory(dirname(path)).create(recursive: true);
+    final file = io.File(path);
+    if (!await file.exists()) {
+      final byteData = await rootBundle.load(assetPath);
+      await file.writeAsBytes(byteData.buffer
+          .asUint8List(byteData.offsetInBytes, byteData.lengthInBytes));
+    }
+    print("model downloaded: " + file.path.toString());
+    return file.path;
   }
 }
