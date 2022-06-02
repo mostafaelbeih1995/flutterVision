@@ -30,6 +30,8 @@ dependencies:
   flutter:
     sdk: flutter
 
+  flutter_vlc_player: ^0.0.2
+
 
   camera: ^0.9.4+21
   path_provider: ^2.0.9
