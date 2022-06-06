@@ -127,6 +127,13 @@ packages:
       url: "https://pub.dartlang.org"
     source: hosted
     version: "1.6.4"
+  floating_text:
+    dependency: "direct main"
+    description:
+      name: floating_text
+      url: "https://pub.dartlang.org"
+    source: hosted
+    version: "0.1.1"
   flutter:
     dependency: "direct main"
     description: flutter

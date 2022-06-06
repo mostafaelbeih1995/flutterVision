@@ -292,6 +292,7 @@ import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:google_mlkit_object_detection/google_mlkit_object_detection.dart';
 import 'package:google_mlkit_commons/google_mlkit_commons.dart';
+import 'package:floating_text/floating_text.dart';
 
 
 late List<CameraDescription> _cameras;
@@ -318,12 +319,12 @@ class _CameraAppState extends State<CameraApp> {
   late ObjectDetectorOptions options;
   late Future<String> modelPath;
   final path = 'assets/ml/object_labeler.tflite';
-  String scannedText = "Did not scan yet";
+  String scannedText = "";
   bool _isAnalysisOn = false;
 
   // Function to convert CameraImage to InputImage to get processed by ml kit
   Future<InputImage?> _convertCameraToInput(CameraImage image) async {
-    scannedText = "inside process Image";
+    // scannedText = "inside process Image";
     final WriteBuffer allBytes = WriteBuffer();
     for (final Plane plane in image.planes) {
       allBytes.putUint8List(plane.bytes);
@@ -337,16 +338,16 @@ class _CameraAppState extends State<CameraApp> {
     final imageRotation =
     InputImageRotationValue.fromRawValue(camera.sensorOrientation);
     if (imageRotation == null){
-      // scannedText = "image rotation null";
-      // setState(() {scannedText = scannedText;});
+      scannedText = "image rotation null";
+      setState(() {scannedText = scannedText;});
       return null;
     };
 
     final inputImageFormat =
     InputImageFormatValue.fromRawValue(image.format.raw);
     if (inputImageFormat == null){
-      // scannedText = "image format null";
-      // setState(() {scannedText = scannedText;});
+      scannedText = "image format null";
+      setState(() {scannedText = scannedText;});
       return null;
     };
 
@@ -367,11 +368,15 @@ class _CameraAppState extends State<CameraApp> {
       planeData: planeData,
     );
     InputImage inputImage =InputImage.fromBytes(bytes: bytes, inputImageData: inputImageData);
-    scannedText = "before returning";
+    if(inputImage == null){
+      // scannedText = "null input image";
+    }else{
+      // scannedText = "input image has value";
+    }
     setState(() {scannedText = scannedText;});
+
     return inputImage;
 
-    // widget.onImage(inputImage);
   }
 
   // analyzing current frame
@@ -379,32 +384,32 @@ class _CameraAppState extends State<CameraApp> {
 
     _isAnalysisOn = true;
     setState(() {_isAnalysisOn = true;});
-    InputImage inputImage = _convertCameraToInput(cameraImage) as InputImage;
+    InputImage inputImage = await _convertCameraToInput(cameraImage) as InputImage;
     if(inputImage == null){
       scannedText = "could not conver image";
     }
     else{
-      scannedText = "image converted successfully";
     }
     setState((){ scannedText = scannedText;});
     final List<DetectedObject> objects = await objectDetector.processImage(inputImage);
-    scannedText += "Objects found : [" + objects.length.toString() + "]\n";
+    // scannedText += "Objects found : [" + objects.length.toString() + "]\n";
     final List<DetectedObject> _objects = await objectDetector.processImage(inputImage);
 
     for(DetectedObject detectedObject in _objects){
-      final rect = detectedObject.boundingBox;
-      final trackingId = detectedObject.trackingId;
+      // final rect = detectedObject.boundingBox;
+      // final trackingId = detectedObject.trackingId;
 
 
       // scannedText += "Id: " + ('${trackingId}') + "\n";
       if(detectedObject.labels.length > 0){
         for(Label label in detectedObject.labels){
-          scannedText = scannedText + ('${label.text} ${label.confidence}') + "\n";
+          scannedText = ('${label.text} ${label.confidence}') + "\n";
         }
-        scannedText += "Rect: " + ('${rect.toString()}') + "\n";
+        // scannedText += "Rect: " + ('${rect.toString()}') + "\n";
       }
 
     }
+    _isAnalysisOn = false;
     setState(() {});
   }
   @override
@@ -473,6 +478,7 @@ class _CameraAppState extends State<CameraApp> {
     }
     return MaterialApp(
         home:Scaffold(
+          resizeToAvoidBottomInset: false,
           appBar: AppBar(
             title: Text("Container App"),
           ),
@@ -482,34 +488,63 @@ class _CameraAppState extends State<CameraApp> {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   CameraPreview(controller),
-                Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                              children: <Widget>[
-                                MaterialButton(
-                                    child: Text("Start Scanning"),
-                                    textColor: Colors.white,
-                                    color: Colors.blue,
-                                    onPressed: () async {
-                                      await controller.startImageStream((CameraImage availableImage) {
+                  // FloatingText(
+                  //   text: '${scannedText}',
+                  //   repeat: false,
+                  //   // duration: Duration(milliseconds: 100),
+                  //   textStyle: TextStyle(
+                  //     fontSize: 5,
+                  //     color: Colors.black54,
+                  //   ),
+                  //   // floatingTextStyle: TextStyle(
+                  //   //   color: Colors.red,
+                  //   //   fontSize: 40,
+                  //   //   shadows: [
+                  //   //     BoxShadow(
+                  //   //       color: Colors.yellow,
+                  //   //       blurRadius: 10,
+                  //   //     )
+                  //   //   ],
+                  //   // ),
+                  // ),
+                  Positioned(
+                    top: 0,
+                    right: 285,
+                    child: CircleAvatar(
+                      radius: 100,
+                      backgroundColor: Colors.red,
+                      foregroundColor: Colors.white,
+                      child: Text('${scannedText}'),
+                    ), //CircularAvatar
+                  ), //Positioned
+                  Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                children: <Widget>[
+                                  MaterialButton(
+                                      child: Text("Start Scanning"),
+                                      textColor: Colors.white,
+                                      color: Colors.blue,
+                                      onPressed: () async {
+                                        await controller.startImageStream((CameraImage availableImage) {
 
-                                        if (!_isAnalysisOn)
-                                          analyzeImage(availableImage);
-                                      });
-                                    }
-                                ),
-                                MaterialButton(
-                                    child: Text("Stop Scanning"),
-                                    textColor: Colors.white,
-                                    color: Colors.red,
-                                    onPressed: () async {
-                                      await controller.stopImageStream();
-                                      objectDetector.close();
-                                      // controller.dispose();
-                                    }
-                                )
-                              ]
-                          ),
-                  Text(scannedText)
+                                          if (!_isAnalysisOn)
+                                            analyzeImage(availableImage);
+                                        });
+                                      }
+                                  ),
+                                  MaterialButton(
+                                      child: Text("Stop Scanning"),
+                                      textColor: Colors.white,
+                                      color: Colors.red,
+                                      onPressed: () async {
+                                        await controller.stopImageStream();
+                                        objectDetector.close();
+                                        // controller.dispose();
+                                      }
+                                  )
+                                ]
+                            ),
+
                 ],
               )
             )
