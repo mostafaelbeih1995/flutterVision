@@ -283,9 +283,16 @@
 // }
 
 //-----------------------------------------------------------------------------------------------------------//
-
+import 'dart:io' as io;
 import 'package:camera/camera.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:path/path.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:google_mlkit_object_detection/google_mlkit_object_detection.dart';
+import 'package:google_mlkit_commons/google_mlkit_commons.dart';
+
 
 late List<CameraDescription> _cameras;
 
@@ -307,15 +314,117 @@ class CameraApp extends StatefulWidget {
 
 class _CameraAppState extends State<CameraApp> {
   late CameraController controller;
-  // bool _isScanBusy = false;
+  late ObjectDetector objectDetector;
+  late ObjectDetectorOptions options;
+  late Future<String> modelPath;
+  final path = 'assets/ml/object_labeler.tflite';
+  String scannedText = "Did not scan yet";
+  bool _isAnalysisOn = false;
+
+  // Function to convert CameraImage to InputImage to get processed by ml kit
+  Future<InputImage?> _convertCameraToInput(CameraImage image) async {
+    scannedText = "inside process Image";
+    final WriteBuffer allBytes = WriteBuffer();
+    for (final Plane plane in image.planes) {
+      allBytes.putUint8List(plane.bytes);
+    }
+    final bytes = allBytes.done().buffer.asUint8List();
+
+    final Size imageSize =
+    Size(image.width.toDouble(), image.height.toDouble());
+
+    final camera = _cameras[0];
+    final imageRotation =
+    InputImageRotationValue.fromRawValue(camera.sensorOrientation);
+    if (imageRotation == null){
+      // scannedText = "image rotation null";
+      // setState(() {scannedText = scannedText;});
+      return null;
+    };
+
+    final inputImageFormat =
+    InputImageFormatValue.fromRawValue(image.format.raw);
+    if (inputImageFormat == null){
+      // scannedText = "image format null";
+      // setState(() {scannedText = scannedText;});
+      return null;
+    };
+
+    final planeData = image.planes.map(
+          (Plane plane) {
+        return InputImagePlaneMetadata(
+          bytesPerRow: plane.bytesPerRow,
+          height: plane.height,
+          width: plane.width,
+        );
+      },
+    ).toList();
+
+    final inputImageData = InputImageData(
+      size: imageSize,
+      imageRotation: imageRotation,
+      inputImageFormat: inputImageFormat,
+      planeData: planeData,
+    );
+    InputImage inputImage =InputImage.fromBytes(bytes: bytes, inputImageData: inputImageData);
+    scannedText = "before returning";
+    setState(() {scannedText = scannedText;});
+    return inputImage;
+
+    // widget.onImage(inputImage);
+  }
+
+  // analyzing current frame
+  void analyzeImage(CameraImage cameraImage) async {
+
+    _isAnalysisOn = true;
+    setState(() {_isAnalysisOn = true;});
+    InputImage inputImage = _convertCameraToInput(cameraImage) as InputImage;
+    if(inputImage == null){
+      scannedText = "could not conver image";
+    }
+    else{
+      scannedText = "image converted successfully";
+    }
+    setState((){ scannedText = scannedText;});
+    final List<DetectedObject> objects = await objectDetector.processImage(inputImage);
+    scannedText += "Objects found : [" + objects.length.toString() + "]\n";
+    final List<DetectedObject> _objects = await objectDetector.processImage(inputImage);
+
+    for(DetectedObject detectedObject in _objects){
+      final rect = detectedObject.boundingBox;
+      final trackingId = detectedObject.trackingId;
+
+
+      // scannedText += "Id: " + ('${trackingId}') + "\n";
+      if(detectedObject.labels.length > 0){
+        for(Label label in detectedObject.labels){
+          scannedText = scannedText + ('${label.text} ${label.confidence}') + "\n";
+        }
+        scannedText += "Rect: " + ('${rect.toString()}') + "\n";
+      }
+
+    }
+    setState(() {});
+  }
   @override
   void initState() {
     super.initState();
+    _getModel(path).then((modelPath) {
+      options = LocalObjectDetectorOptions(
+        mode: DetectionMode.stream,
+        modelPath: modelPath,
+        classifyObjects: true,
+        multipleObjects: true,
+      );
+      objectDetector = ObjectDetector(options: options);
+    });
     controller = CameraController(_cameras[0], ResolutionPreset.max);
     controller.initialize().then((_) {
       if (!mounted) {
         return;
       }
+
       setState(() {});
     }).catchError((Object e) {
       if (e is CameraException) {
@@ -330,6 +439,26 @@ class _CameraAppState extends State<CameraApp> {
       }
     });
   }
+
+
+  // loading local model
+    Future<String> _getModel(String assetPath) async {
+    if (io.Platform.isAndroid) {
+      return 'flutter_assets/$assetPath';
+
+    }
+    final path = '${(await getApplicationSupportDirectory()).path}/$assetPath';
+    await io.Directory(dirname(path)).create(recursive: true);
+    final file = io.File(path);
+    if (!await file.exists()) {
+      final byteData = await rootBundle.load(assetPath);
+      await file.writeAsBytes(byteData.buffer
+          .asUint8List(byteData.offsetInBytes, byteData.lengthInBytes));
+    }
+    print("model downloaded: " + file.path.toString());
+    return file.path;
+  }
+
 
   @override
   void dispose() {
@@ -352,83 +481,40 @@ class _CameraAppState extends State<CameraApp> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  CameraPreview(controller), Text("This is a sample description")
+                  CameraPreview(controller),
+                Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              children: <Widget>[
+                                MaterialButton(
+                                    child: Text("Start Scanning"),
+                                    textColor: Colors.white,
+                                    color: Colors.blue,
+                                    onPressed: () async {
+                                      await controller.startImageStream((CameraImage availableImage) {
+
+                                        if (!_isAnalysisOn)
+                                          analyzeImage(availableImage);
+                                      });
+                                    }
+                                ),
+                                MaterialButton(
+                                    child: Text("Stop Scanning"),
+                                    textColor: Colors.white,
+                                    color: Colors.red,
+                                    onPressed: () async {
+                                      await controller.stopImageStream();
+                                      objectDetector.close();
+                                      // controller.dispose();
+                                    }
+                                )
+                              ]
+                          ),
+                  Text(scannedText)
                 ],
               )
             )
           ),
         )
     );
-
-    // return MaterialApp(
-    //   home: CameraPreview(controller),
-    // );
-    // return Container(
-    //   child: AspectRatio(
-    //     aspectRatio: controller.value.aspectRatio,
-    //     child: CameraPreview(controller),
-    //   )
-    // );
-    // return AspectRatio(
-    //   aspectRatio: controller.value.aspectRatio,
-    //   child: CameraPreview(controller),
-    // );
   }
-
-  // @override
-  // Widget build(BuildContext context) {
-  //   if (!controller.value.isInitialized) {
-  //     return Container();
-  //   }
-  //   return Column(
-  //       children: [
-  //         Expanded(
-  //             child: _cameraPreviewWidget()
-  //         ),
-  //         Row(
-  //             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-  //             children: <Widget>[
-  //               MaterialButton(
-  //                   child: Text("Start Scanning"),
-  //                   textColor: Colors.white,
-  //                   color: Colors.blue,
-  //                   onPressed: () async {
-  //                     await controller.startImageStream((CameraImage availableImage) {
-  //                       //controller.stopImageStream();
-  //
-  //                       // if (!_isScanBusy)
-  //                       //   _scanText(availableImage);
-  //                     });
-  //                   }
-  //               ),
-  //               MaterialButton(
-  //                   child: Text("Stop Scanning"),
-  //                   textColor: Colors.white,
-  //                   color: Colors.red,
-  //                   onPressed: () async => await controller.stopImageStream()
-  //               )
-  //             ]
-  //         )
-  //       ]
-  //   );
-  //
-  // }
-
-  // Widget _cameraPreviewWidget() {
-  //   if (controller == null || !controller.value.isInitialized) {
-  //     return const Text(
-  //       'Tap a camera',
-  //       style: TextStyle(
-  //         color: Colors.white,
-  //         fontSize: 24.0,
-  //         fontWeight: FontWeight.w900,
-  //       ),
-  //     );
-  //   } else {
-  //     return AspectRatio(
-  //       aspectRatio: controller.value.aspectRatio,
-  //       child: CameraPreview(controller),
-  //     );
-  //   }
-  // }
 }
