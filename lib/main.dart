@@ -114,11 +114,6 @@ class _CameraAppState extends State<CameraApp> {
     InputImage inputImage =
         InputImage.fromBytes(bytes: bytes, inputImageData: inputImageData);
 
-    // if (inputImage == null) {
-    //   // scannedText = "null input image";
-    // } else {
-    //   // scannedText = "input image has value";
-    // }
     setState(() {
       scannedText = scannedText;
     });
@@ -241,16 +236,6 @@ class _CameraAppState extends State<CameraApp> {
           //   child: controller == null ? Container() : CameraPreview(controller),
           // ),
           controller == null ? Container() : CameraPreview(controller),
-          // Positioned(
-          //   top: 0,
-          //   right: 285,
-          //   child: CircleAvatar(
-          //     radius: 100,
-          //     backgroundColor: Colors.red,
-          //     foregroundColor: Colors.white,
-          //     child: Text('${scannedText}'),
-          //   ), //CircularAvatar
-          // ), //Positioned
           Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: <Widget>[
