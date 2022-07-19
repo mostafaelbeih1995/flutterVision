@@ -3,7 +3,7 @@
 An fkutter app that uses google ML Kit.
 
 ### Features
-- [x] Select image from gallery
-- [x] Identify text within image
-- [x] Display text
+- [x] Click start scanning button 
+- [x] Point the camera to desired object to be detected
+- [x] Boundig box with object name would appear surrounding the object
 
