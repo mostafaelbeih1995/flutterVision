@@ -1,6 +1,6 @@
 ## Flutter Vision
 
-An fkutter app that uses google ML Kit.
+An flutter app that uses google ML Kit.
 
 ### Features
 - :white_check_mark: Click start scanning button 
